@@ -1,0 +1,14 @@
+# This file documents the same exclusions if docker/ is used as a build context.
+node_modules/
+dist/
+build/
+coverage/
+.git/
+.env
+.env.*
+cookies.txt
+cookies-*.txt
+uploads/
+*.tsbuildinfo
+*.log
+**/*.spec.ts

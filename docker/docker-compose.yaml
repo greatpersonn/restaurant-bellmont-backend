@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-bellmont}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bellmont_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-bellmont}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../db/01-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ../db/02-seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bellmont} -d ${POSTGRES_DB:-bellmont}"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-bellmont}:${POSTGRES_PASSWORD:-bellmont_dev}@db:5432/${POSTGRES_DB:-bellmont}
+      PORT: 3000
+      JWT_SECRET: ${JWT_SECRET:-local-only-change-me-before-deploy}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      CURRENCY: ${CURRENCY:-USD}
+      RESTAURANT_TIMEZONE: ${RESTAURANT_TIMEZONE:-Europe/Kyiv}
+      UPLOADS_DIR: /app/uploads
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+  adminer:
+    image: adminer:4
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  postgres_data:
+  uploads:
